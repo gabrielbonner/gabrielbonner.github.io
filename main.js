@@ -807,10 +807,6 @@ function onLoad() {
     }
 
     document.getElementById("onlyASCII").cheched = true;
-    console.log (navigator);
-    console.log (navigator.mediaDevices);
-    console.log (navigator.getUserMedia);
-    console.log (navigator.mediaDevices.getUserMedia);
 
     try {
         navigator.getUserMedia({ audio: true, video: true }, gotStream, onUserMediaError);
