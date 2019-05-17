@@ -1,6 +1,5 @@
 //RTCPeerConnection = webkitRTCPeerConnection || RTCPeerConnection || window.mozRTCPeerConnection;
 //URL = webkitURL || URL;
-navigator.getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.GetUserMedia || navigator.msGetUserMedia;
 windowURL = window.URL || window.webkitURL || window.mozURL || window.msURL;
 
 
