@@ -422,13 +422,8 @@ function setFocus() {
 
 function gotStream(stream) {
     localStream = stream;
-     trace("lOCAL stream added.1");
-    var url = windowURL.createObjectURL(localStream);
-     trace("lOCAL stream added.2");
     localVideo.style.opacity = 1;
-     trace("lOCAL stream added.3");
-    localVideo.src = url;
-     trace("lOCAL stream added.4");
+    localVideo.srcObject = localStream;
 
     trace("lOCAL stream added.5");
     document.getElementById("selfView").style.display="block";
@@ -463,8 +458,7 @@ function onSessionOpened(message) {
 
 function onRemoteStreamAdded(event) {
     document.getElementById("remote").style.display="block";
-    var url = windowURL.createObjectURL(event.stream);
-    remoteVideo.src = url;
+    remoteVideo.srcObject = event.stream;
     remoteStream = event.stream;
     changeVideoStreamStyles(true);
 }
