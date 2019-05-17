@@ -808,8 +808,9 @@ function onLoad() {
 
     document.getElementById("onlyASCII").cheched = true;
     console.log(navigator);
+    console.lgo(navigatorCordova);
     try {
-        navigator.getUserMedia({ audio: true, video: true }, gotStream, onUserMediaError);
+        navigatorCordova.getUserMedia({ audio: true, video: true }, gotStream, onUserMediaError);
         
         trace("Requested access to local media with new syntax.");
     } catch (e) {
