@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title> WebRTC Test Application v5 </title>
+        <meta charset="utf-8">
+            <style>
+        body {
+            background-color: darkgray;
+        }
+        .imgbutton {
+            width: 50px;
+        }
+    </style>
+    <script src="hcap.js"></script>
+    <!--<script src="hcap_api.js"></script>-->
+    <script>
+        navigator.getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.GetUserMedia || navigator.msGetUserMedia;
+        windowURL = window.URL || window.webkitURL || window.mozURL || window.msURL;
+		var isConnected = false;
+        var request = null;
+        var hangingGet = null;
+        var localName;
+        var server;
+        var my_id = 0;
+        var g_peer_id = -1;
+        var other_peers = {};
+        var message_counter = 0;
+        var localVideo;
+        var remoteVideo;
+        var localStream;
+        var started = false;
+        var signed_In = false;
+        var mediaTrackConstraints = {
+            'has_audio': true,
+            'has_video': true
+        };
+        var isRTCPeerConnection = true;
+        var notMultiSession = true;
+        var activeCall = false;
+        var connectedPeerName;
+        var connectedPeerId;
+        var onlyASCII = true;
+
+        var localConstraints = {
+            audio: true,
+            video: {
+                mandatory: {
+                    minWidth: 320,
+                    minHeight: 240
+                }
+            }
+        };
+        var mediaConstraints = {
+            'mandatory': {
+                'OfferToReceiveAudio': true,
+                'OfferToReceiveVideo': true
+            }
+        };
+        var sdpConstraints = {
+            optional: [{
+                DtlsSrtpKeyAgreement: true
+            }, {
+                RtpDataChannels: true
+            }]
+        };
+
+        function startPreviewVideo() {
+            trace("hcap.webrtc.startPreviewVideo({});");
+            hcap.webrtc.startPreviewVideo({
+                "onSuccess": function() {
+                    trace("onSuccess to call startPreviewVideo");
+                },
+                "onFailure": function(f) {
+                    trace("onFailure : errorMessage = " + f.errorMessage);
+                }
+            });
+        }
+        
+        function stopPreviewVideo() {
+            trace("hcap.webrtc.stopPreviewVideo({});");
+            hcap.webrtc.stopPreviewVideo({
+                "onSuccess": function() {
+                    trace("onSuccess to call stopPreviewVideo");
+                },
+                "onFailure": function(f) {
+                    trace("onFailure : errorMessage = " + f.errorMessage);
+                }
+            });
+        }
+        
+        function incomingCall() {
+            var localId = 11;
+            var remoteId = 13;
+            var remoteSDP = "sdp message";
+            trace("hcap.webrtc.incomingCall({\"localId\":" + localId + ",\"remoteId\":" + remoteId + ",\"remoteSDP\":\"" + remoteSDP + "\"});");
+            alert('yes');
+            hcap.webrtc.incomingCall({
+                "localId": localId,
+                "remoteId": remoteId,
+                "remoteSDP": remoteSDP,
+                "onSuccess": function() {
+                    trace("onSuccess to call incomingCall");
+                },
+                "onFailure": function(f) {
+                    trace("onFailure : errorMessage = " + f.errorMessage);
+                }
+            });
+        }
+        
+        function outgoingCallButton() {
+            var localId = 11;
+            var remoteId = 13;
+            trace("hcap.webrtc.outgoingCall({\"localId\":" + localId + ",\"remoteId\":" + remoteId + "\"});");
+            hcap.webrtc.outgoingCall({
+                "localId": localId,
+                "remoteId": remoteId,
+                "onSuccess": function() {
+                    trace("onSuccess to call outgoingCall");
+                },
+                "onFailure": function(f) {
+                    trace("onFailure : errorMessage = " + f.errorMessage);
+                }
+            });
+        }
+        
+        function endCall() {
+            trace("hcap.webrtc.endCall({});");
+            hcap.webrtc.endCall({
+                "onSuccess": function() {
+                    trace("onSuccess to call endCall");
+                },
+                "onFailure": function(f) {
+                    trace("onFailure : errorMessage = " + f.errorMessage);
+                }
+            });
+        }
+        
+        function startCheckAudioStep1() {
+            trace("hcap.webrtc.startCheckAudio('microphone');");
+            hcap.webrtc.startCheckAudio({
+				"type":"microphone",
+                "onSuccess": function() {
+                    trace("onSuccess to call startCheckAudio microphone");
+                },
+                "onFailure": function(f) {
+                    trace("onFailure : errorMessage = " + f.errorMessage);
+                }
+            });
+        }
+		
+		function startCheckAudioStep2() {
+            trace("hcap.webrtc.startCheckAudio('speaker');");
+            hcap.webrtc.startCheckAudio({
+				"type":"speaker",
+                "onSuccess": function() {
+                    trace("onSuccess to call startCheckAudio speaker");
+                },
+                "onFailure": function(f) {
+                    trace("onFailure : errorMessage = " + f.errorMessage);
+                }
+            });
+        }
+        
+        function stopCheckAudio() {
+            trace("hcap.webrtc.stopCheckAudio({});");
+            hcap.webrtc.stopCheckAudio({
+                "onSuccess": function() {
+                    trace("onSuccess to call stopCheckAudio");
+                },
+                "onFailure": function(f) {
+                    trace("onFailure : errorMessage = " + f.errorMessage);
+                }
+            });
+        }
+        
+        function setConfigurationTurn() {
+            var keyStr = "ice_cfg";
+            var valueStr = "turn:50.112.253.99:3478|youhavetoberealistic|ninefingers;";
+            trace("hcap.webrtc.setConfiguration({\"key\":\"" + keyStr + "\",\"value\":\"" + valueStr + "\"});");
+            hcap.webrtc.setConfiguration({
+                "key": keyStr,
+                "value": valueStr,
+                "onSuccess": function() {
+                    trace("onSuccess to call setConfiguration");
+                },
+                "onFailure": function(f) {
+                    trace("onFailure : errorMessage = " + f.errorMessage);
+                }
+            });
+        }
+		
+		function setConfigurationAudioConf() {
+            var keyStr = "audio_streams_cfg";
+            var valueStr = "googEchoCancellation2|googNoiseSuppression2|googTypingNoiseDetection";
+            trace("hcap.webrtc.setConfiguration({\"key\":\"" + keyStr + "\",\"value\":\"" + valueStr + "\"});");
+            hcap.webrtc.setConfiguration({
+                "key": "max height",
+                "value": "480",
+                "onSuccess": function() {
+                    trace("onSuccess to call setConfiguration");
+                },
+                "onFailure": function(f) {
+                    trace("onFailure : errorMessage = " + f.errorMessage);
+                }
+            });
+        }
+        
+        function getConfiguration() {
+            trace("hcap.webrtc.getConfiguration({});");
+            hcap.webrtc.getConfiguration({
+                "onSuccess": function(s) {
+                    trace("onSuccess : configurations = " + s.configurations);
+                },
+                "onFailure": function(f) {
+                    trace("onFailure : errorMessage = " + f.errorMessage);
+                }
+            });
+        }
+        
+        function showDiagnostics() {
+            trace("hcap.webrtc.showDiagnostics({});");
+            hcap.webrtc.showDiagnostics({
+                "onSuccess": function() {
+                    trace("onSuccess to call showDiagnostics");
+                },
+                "onFailure": function(f) {
+                    trace("onFailure : errorMessage = " + f.errorMessage);
+                }
+            });
+        }
+        
+        function acceptMessage() {
+            var remoteId = 1;
+            alert('excepted');
+            var rtcMsg = "v=0\r\no=- 784574930202939924 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE audio video\r\na=msid-semantic: WMS TMHQQzj7s7PaqtYNaZgsHn1eeRnEYgC4sbbA\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111 103 104 9 0 8 106 105 13 126\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:ZRB6aIsVSesuO15J\r\na=ice-pwd:1pdEHK5+vMcz+zdxc2fmKoRd\r\na=fingerprint:sha-256 43:6B:69:27:8A:C3:E0:1C:FC:CD:34:37:A8:A3:63:08:C5:7E:95:C5:DE:5F:7D:1A:8C:61:02:F1:EA:77:48:8B\r\na=setup:actpass\r\na=mid:audio\r\na=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level\r\na=extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\r\na=sendrecv\r\na=rtcp-mux\r\na=rtpmap:111 opus/48000/2\r\na=fmtp:111 minptime=10; useinbandfec=1\r\na=rtpmap:103 ISAC/16000\r\na=rtpmap:104 ISAC/32000\r\na=rtpmap:9 G722/8000\r\na=rtpmap:0 PCMU/8000\r\na=rtpmap:8 PCMA/8000\r\na=rtpmap:106 CN/32000\r\na=rtpmap:105 CN/16000\r\na=rtpmap:13 CN/8000\r\na=rtpmap:126 telephone-event/8000\r\na=maxptime:60\r\na=ssrc:2106420173 cname:adTsXktLU7uPdxCy\r\na=ssrc:2106420173 msid:TMHQQzj7s7PaqtYNaZgsHn1eeRnEYgC4sbbA 1d460174-d982-47b0-ad88-dd78c822011f\r\na=ssrc:2106420173 mslabel:TMHQQzj7s7PaqtYNaZgsHn1eeRnEYgC4sbbA\r\na=ssrc:2106420173 label:1d460174-d982-47b0-ad88-dd78c822011f\r\nm=video 9 UDP/TLS/RTP/SAVPF 100 116 117 96\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:ZRB6aIsVSesuO15J\r\na=ice-pwd:1pdEHK5+vMcz+zdxc2fmKoRd\r\na=fingerprint:sha-256 43:6B:69:27:8A:C3:E0:1C:FC:CD:34:37:A8:A3:63:08:C5:7E:95:C5:DE:5F:7D:1A:8C:61:02:F1:EA:77:48:8B\r\na=setup:actpass\r\na=mid:video\r\na=extmap:2 urn:ietf:params:rtp-hdrext:toffset\r\na=extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\r\na=extmap:4 urn:3gpp:video-orientation\r\na=sendrecv\r\na=rtcp-mux\r\na=rtpmap:100 VP8/90000\r\na=rtcp-fb:100 ccm fir\r\na=rtcp-fb:100 nack\r\na=rtcp-fb:100 nack pli\r\na=rtcp-fb:100 goog-remb\r\na=rtpmap:116 red/90000\r\na=rtpmap:117 ulpfec/90000\r\na=rtpmap:96 rtx/90000\r\na=fmtp:96 apt=100\r\na=ssrc-group:FID 3921613324 3494539976\r\na=ssrc:3921613324 cname:adTsXktLU7uPdxCy\r\na=ssrc:3921613324 msid:TMHQQzj7s7PaqtYNaZgsHn1eeRnEYgC4sbbA 38920097-f5c1-4640-b4a7-a8f69b3d028f\r\na=ssrc:3921613324 mslabel:TMHQQzj7s7PaqtYNaZgsHn1eeRnEYgC4sbbA\r\na=ssrc:3921613324 label:38920097-f5c1-4640-b4a7-a8f69b3d028f\r\na=ssrc:3494539976 cname:adTsXktLU7uPdxCy\r\na=ssrc:3494539976 msid:TMHQQzj7s7PaqtYNaZgsHn1eeRnEYgC4sbbA 38920097-f5c1-4640-b4a7-a8f69b3d028f\r\na=ssrc:3494539976 mslabel:TMHQQzj7s7PaqtYNaZgsHn1eeRnEYgC4sbbA\r\na=ssrc:3494539976 label:38920097-f5c1-4640-b4a7-a8f69b3d028f\r\n";
+            trace("hcap.webrtc.acceptMessage({\"remoteId\":" + remoteId + ",\"rtcMsg\":\"" + rtcMsg + "\"});");
+            hcap.webrtc.acceptMessage({
+                "remoteId": remoteId,
+                "rtcMsg": rtcMsg,
+                "onSuccess": function() {
+                    trace("onSuccess to call acceptMessage");
+                },
+                "onFailure": function(f) {
+                    trace("onFailure : errorMessage = " + f.errorMessage);
+                }
+            });
+        }
+
+
+        function AsciiHex2Str(sAsciiHex) {
+            var sRes = "";
+            if ((sAsciiHex.length > 0) && (sAsciiHex.length % 2 == 0)) {
+                var items = sAsciiHex.match(/.{2}/g);
+                for (var i = 0; i < items.length; i++) {
+                    var iItem = parseInt(items[i], 16);
+                    sRes += String.fromCharCode(iItem);
+                }
+            }
+            return sRes;
+        }
+
+        function str2AsciiHex(sStr) {
+            var sRes = "";
+            for (var i = 0; i < sStr.length; i++) {
+                sRes += sStr.charCodeAt(i).toString(16).toUpperCase();
+            }
+            return sRes;
+        }
+
+        function randomString() {
+            var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
+            var string_length = 4;
+            var randomstring = '';
+            for (var i = 0; i < string_length; i++) {
+                var rnum = Math.floor(Math.random() * chars.length);
+                randomstring += chars.substring(rnum, rnum + 1);
+            }
+            //document.getElementById("local").value = "SHINTV-Pyeongtaek " + randomstring;
+            document.getElementById("local").value = "Dinh" + randomstring;
+        }
+
+        function isNumber(n) {
+            return !isNaN(parseFloat(n)) && isFinite(n);
+        }
+
+        function AsciiCodes2Str(sAscii) {
+            var sRes = "";
+            sAscii = sAscii.replace('"', '');
+            var items = sAscii.split(';');
+            for (var i = 0; i < items.length; i++) {
+                if (!isNumber(items[i])) {
+                    break;
+                }
+                var iItem = parseInt(items[i]);
+                sRes += String.fromCharCode(iItem);
+            }
+            return sRes;
+        }
+
+        function str2AsciiCodes(sStr) {
+            var sRes = "";
+            for (var i = 0; i < sStr.length; i++) {
+                sRes += sStr.charCodeAt(i) + ';';
+            }
+            return sRes;
+        }
+
+		function trace(txt) {
+            var elem = document.getElementById("debug");
+            elem.innerHTML = txt + "<br>" + elem.innerHTML;
+            console.log("["+ Date.now() +"]"+txt);
+        }
+        
+        function clearDebug() {
+            document.getElementById("debug").innerHTML = "";
+        }
+
+        function keydown(e) {
+            if (!e) e = event;
+
+            var code = (e.keyCode ? e.keyCode : e.which);
+
+            switch (code) {
+                case hcap.key.Code.UP:
+                case hcap.key.Code.DOWN:
+                case hcap.key.Code.ENTER:
+                case hcap.key.Code.PORTAL:
+                case hcap.key.Code.EXIT:
+            }
+        }
+
+        function init_key_listener() {
+            if (document.addEventListener) {
+                document.addEventListener("keydown", keydown, false);
+            } else if (document.attachEvent) {
+                document.attachEvent("onkeydown", keydown);
+            }
+        }
+
+        function sendMessage(peer_id, message) {
+            trace("[sendMessage] >>>");
+			
+            trace("[sendMessage] peer_id:" + peer_id + " C->S: " + message);
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', server + "/message/peer_id/" + my_id + "/to/" + peer_id, true);
+            xhr.setRequestHeader("Content-Type", "text/plain");
+            xhr.send(message);
+            xhr = null;
+        }
+
+        function setLocalAndSendMessage(sessionDescription) {
+            trace("[setLocalAndSendMessage]");
+            //   trace("[setLocalAndSendMessage] SET LOCAL SDP ");
+            //pc.setLocalDescription(sessionDescription);
+
+            //   sendMessage(sessionDescription);
+        }
+
+        var CallAnswerErrorCallBack = function(e) {
+            trace("Something wrong happened when answer or offer " + e.toString());
+        };
+
+        function doAnswer(peer_id, sdp_msg) {            
+            trace("[doAnswer] SEND INCOMING CALL ");
+            trace("signed_In = " + signed_In + ", started = " + started + ", activeCall = " + activeCall + ", my_id = " + my_id + ", peer2_id = " + peer_id, "sdp" + sdp_msg);
+
+            hcap.webrtc.incomingCall({
+                "localId": my_id,
+                "remoteId": peer_id,
+                "remoteSDP": sdp_msg,
+                "onSuccess": function() {
+                    trace("onSuccess to call outgoingCall");
+                },
+                "onFailure": function(f) {
+                    trace("onFailure : errorMessage = " + f.errorMessage);
+                }
+            });
+
+            activeCall = true;
+        }
+
+        function processSignalingMessage(message, peer_id) {
+            //trace('processSignalingMessage:' + message);
+            try {
+            	if (message.length <= 0) {
+            		//trace("processSignalingMessage : message.length[" + message.length + "] <= 0");
+            		return;
+            	}
+            	/*
+	                var msg = JSON.parse(message);
+	                var msg_encoded = message;
+	
+	                if (msg == null) {
+	                    trace('processSignalingMessage: msg == null');
+	                    return;
+	                }
+	
+	                trace("processSignalingMessage [krutogolov] [" + msg.type + "] "+ msg);
+	                
+	                if (msg.type === 'offer') {                    
+	                    doAnswer(peer_id, msg_encoded);
+	                } else if (msg.type === 'answer' && started) {
+	                    trace('[processSignalingMessage] SEND ACCEPT MESSAGE');
+	
+	                    hcap.webrtc.acceptMessage({
+	                        "remoteId": peer_id,
+	                        "rtcMsg": msg_encoded,
+	                        "onSuccess": function() {
+	                            trace("onSuccess to call incomingCall");
+	                        },
+	                        "onFailure": function(f) {
+	                            trace("onFailure : errorMessage = " + f.errorMessage);
+	                        }
+	                    });
+	
+	                } else if (msg.type === 'candidate' && started ) {				
+	                    trace('[processSignalingMessage] CREATE ICE CANDIDATE AND ADD ICE CANDIDATE');
+	                    hcap.webrtc.acceptMessage({
+	                        "remoteId": peer_id,
+	                        "rtcMsg": msg_encoded,
+	                        "onSuccess": function() {
+	                            trace("onSuccess to call incomingCall");
+	                        },
+	                        "onFailure": function(f) {
+	                            trace("onFailure : errorMessage = " + f.errorMessage);
+	                        }
+	                    });
+	                } else if (msg.type === 'bye' && started) {
+						isConnected = false;
+	                    onRemoteHangup();
+						//endCall();
+	                } else if (msg.type === 'Icallyou') {
+	                    if (!activeCall) {
+	                        if (confirm("Do you accept call from " + other_peers[peer_id] + "?")) {
+	                            sendMessage(peer_id, {
+	                                type: 'Iagree'
+	                            });
+	                        } else {
+	                            sendMessage(peer_id, {
+	                                type: 'Ireject'
+	                            });
+	                        }
+	                    } else sendMessage(peer_id, {
+	                        type: 'Imbusy'
+	                    });
+	                } else if (msg.type === 'Iagree') {
+	                    //document.getElementById("callee").value = other_peers[peer_id];
+	                    //document.getElementById("peer_id").value = peer_id;
+	                    doCall();
+	                } else if (msg.type === 'Ireject') {
+	                    //document.getElementById('callee').value = "";
+	                    //setButton(false);
+	                    alert("Callee reject you call");
+	                } else if (msg.type === 'Imbusy') {
+	                    //document.getElementById('callee').value = "";
+	                    //setButton(false);
+	                    alert("Callee is busy now");
+	                }
+            	//*/
+            	//*
+            	var msglist = JSON.parse(message);
+            	trace("msglist length = " + msglist.length);
+            	for (var j = 0; j < msglist.length; j++) {
+	                var msg = msglist[j];
+	                var msg_encoded = JSON.stringify(msg);
+	
+	                if (msg == null) {
+	                    trace('processSignalingMessage: msg == null');
+	                    return;
+	                }
+	
+	                trace("processSignalingMessage [krutogolov] [" + msg.type + "] "+ msg);
+	                
+	                if (msg.type === 'offer') {                    
+	                    doAnswer(peer_id, msg_encoded);
+	                } else if (msg.type === 'answer' && started) {
+	                    trace('[processSignalingMessage] SEND ACCEPT MESSAGE');
+	
+	                    hcap.webrtc.acceptMessage({
+	                        "remoteId": peer_id,
+	                        "rtcMsg": msg_encoded,
+	                        "onSuccess": function() {
+	                            trace("onSuccess to call incomingCall");
+	                        },
+	                        "onFailure": function(f) {
+	                            trace("onFailure : errorMessage = " + f.errorMessage);
+	                        }
+	                    });
+	
+	                } else if (msg.type === 'candidate' && started ) {				
+	                    trace('[processSignalingMessage] CREATE ICE CANDIDATE AND ADD ICE CANDIDATE');
+	                    hcap.webrtc.acceptMessage({
+	                        "remoteId": peer_id,
+	                        "rtcMsg": msg_encoded,
+	                        "onSuccess": function() {
+	                            trace("onSuccess to call incomingCall");
+	                        },
+	                        "onFailure": function(f) {
+	                            trace("onFailure : errorMessage = " + f.errorMessage);
+	                        }
+	                    });
+	                } else if (msg.type === 'bye' && started) {
+						isConnected = false;
+	                    onRemoteHangup();
+						//endCall();
+	                } else if (msg.type === 'Icallyou') {
+	                    if (!activeCall) {
+	                        if (confirm("Do you accept call from " + other_peers[peer_id] + "?")) {
+	                            sendMessage(peer_id, {
+	                                type: 'Iagree'
+	                            });
+	                        } else {
+	                            sendMessage(peer_id, {
+	                                type: 'Ireject'
+	                            });
+	                        }
+	                    } else sendMessage(peer_id, {
+	                        type: 'Imbusy'
+	                    });
+	                } else if (msg.type === 'Iagree') {
+	                    //document.getElementById("callee").value = other_peers[peer_id];
+	                    //document.getElementById("peer_id").value = peer_id;
+	                    doCall();
+	                } else if (msg.type === 'Ireject') {
+	                    //document.getElementById('callee').value = "";
+	                    //setButton(false);
+	                    alert("Callee reject you call");
+	                } else if (msg.type === 'Imbusy') {
+	                    //document.getElementById('callee').value = "";
+	                    //setButton(false);
+	                    alert("Callee is busy now");
+	                }
+            	}
+            	//*/
+            } catch (e) {
+                trace('processSignalingMessage e:' + e.message());
+            }
+
+        }
+
+        function handlePeerMessage(peer_id, data) {
+            //trace("[handlePeerMessage] peer " + peer_id + " data " + data);
+            processSignalingMessage(data, peer_id);
+        }
+
+        function clearOtherPeers() {
+            var peerKeys = Object.keys(other_peers);
+            for (i = 0; i < peerKeys.length; i++) {
+                updatePeers(false, peerKeys[i], "");
+            }
+        }
+
+        function disconnect() {
+            trace("[disconnect]");
+            
+            endCall();
+            
+            if (request) {
+                request.abort();
+                request = null;
+            }
+
+            if (hangingGet) {
+                hangingGet.abort();
+                hangingGet = null;
+            }
+
+            if (my_id != 0) {
+                request = new XMLHttpRequest();
+                request.open("GET", server + "/sign_out/peer_id/" + my_id, true);
+                request.send();
+                request = null;
+                my_id = 0;
+            }
+            document.getElementById("server").disabled = false;
+            document.getElementById("local").disabled = false;
+            //    document.getElementById('debug').innerHTML = '';
+            //    document.getElementById('callee').value = "";
+
+            activeCall = false;
+            signed_In = false;
+            clearOtherPeers();
+            showSignInStatus();
+            //changeVideoStreamStyles(false);
+        }
+
+        function GetIntHeader(r, name) {
+            var val = r.getResponseHeader(name);
+            return val != null && val.length ? parseInt(val) : -1;
+        }
+
+        function doCall() {
+            trace("[doCall]");
+
+            if (!started && localStream && signed_In) {
+                // trace("Creating PeerConnection.");
+                // createPeerConnection();
+                // trace("Adding local stream.");
+                // pc.addStream(localStream);
+                trace("started = true");
+                started = true;
+            }
+
+            //setButton(true);
+
+            if (isFirefox) {
+                var constraints = {
+                    "optional": [],
+                    "mandatory": {
+                        "mozDontOfferDataChannel": true
+                    }
+                };
+
+                constraints = mergeConstraints(constraints, mediaConstraints);
+                trace("Sending offer to peer, with constraints: \n  \"" + JSON.stringify(constraints) + "\".")
+                pc.createOffer(setLocalAndSendMessage, CallAnswerErrorCallBack, constraints);
+            } else {
+                trace("pc.createOffer in doCall().Sending offer to peer, with constraints: \n  \"" + JSON.stringify(mediaConstraints) + "\".");
+                pc.createOffer(setLocalAndSendMessage, CallAnswerErrorCallBack, mediaConstraints);
+            }
+            activeCall = true;
+        }
+
+        function callThisPeer(peer_id) {
+            trace("[callThisPeer]");
+            outgoingCall(peer_id);
+        }
+
+        function createPeerToCall(name, peerId, elem) {
+            trace("[createPeerToCall krutogolov] name=" + name);
+            trace("[createPeerToCall krutogolov] name=" + name);
+            var table = document.getElementById("peersLog");
+            var rowCount = table.rows.length;
+
+            var row = table.insertRow(rowCount);
+            row.setAttribute("name", "peer");
+            row.setAttribute("id", "peer" + peerId);
+            var newcell0 = row.insertCell(0);
+            newcell0.style["witdh"] = "60px";
+            newcell0.setAttribute("id", "buttons");
+            newcell0.setAttribute("class", "peerInfo");
+            if (!activeCall) {
+                newcell0.innerHTML = '<button name="call" class="imgbutton" id="' + peerId + '" onclick="callThisPeer(this.id)"><img id="imgCall" src="phone-answer-green-th.png"/></button>';
+            } else {
+                newcell0.innerHTML = '<button name="call" class="imgbutton" id="' + peerId + '" onclick="callThisPeer(this.id)" disabled=true><img id="imgCall" src="phone-answer-gray-th.png"/></button>';
+            }
+            var newcell1 = row.insertCell(1);
+            newcell1.setAttribute("id", "info");
+            newcell1.setAttribute("class", "peerName");
+            newcell1.innerHTML = '<b>' + name + '</b>';
+        }
+
+        function updatePeers(add, peerId, name) {
+            trace("[updatePeers]" + add + ", peer " + peerId + ", name " + name);
+            var peerView = document.getElementById("peersLog");
+            if (add) {
+                var peerKeys = Object.keys(other_peers);
+                if (peerKeys.length == 0) {
+                    peerView.innerHTML = "";
+                }
+                if (onlyASCII)
+                    var decodeName = name;
+                else
+                    var decodeName = decode_utf8(name);
+                trace("name = " + name + " decodeName = " + decodeName);
+                other_peers[peerId] = decodeName;
+                createPeerToCall(decodeName, peerId, peerView);
+            } else {
+                delete other_peers[peerId];
+                deletePeerRow(peerId);
+                var peerKeys = Object.keys(other_peers);
+                if (peerKeys.length == 0) {
+                    peerView.innerHTML = "No available peers.";
+                }
+            }
+
+        }
+
+        function deletePeerRow(peerId) {
+            var peerElem = document.getElementById("peer" + peerId);
+            var table = document.getElementById("peersLog");
+
+            var index = peerElem.rowIndex;
+            table.deleteRow(index);
+        }
+
+        function onRemoteHangup() {
+            trace("onRemoteHangup");
+            trace('Session terminated.');
+            //setButton(false);
+            //started = false;
+            //isRTCPeerConnection = true;
+         //   activeCall = false;
+		 
+            endCall();
+            trace("onRemoteHangup-");
+        }
+
+        function handleServerNotification(rawdata) {
+            trace("[handleServerNotification]: " + rawdata);
+		    var jsondata = JSON.parse(rawdata);
+		    var data = jsondata[0];
+		    trace("data: " + data);
+            var parsed = data.split(',');
+            //var peer_id = parseInt(document.getElementById("peer_id").value);
+            //if (parseInt(parsed[1]) == peer_id && parseInt(parsed[2]) == 0) {
+            //    onRemoteHangup();
+            //}
+
+            var peerId = parseInt(parsed[1]);
+            trace("[handleServerNotification] peerId= " + peerId);
+            g_peer_id = peerId;
+            if (parseInt(parsed[2]) != 0) {
+                updatePeers(true, peerId, parsed[0]);
+            } else {
+                if (other_peers[peerId] != "undefined") {
+                    updatePeers(false, peerId, "");
+                }
+            }
+
+            trace("[handleServerNotification] number of peers " + Object.keys(other_peers).length);
+            trace("[handleServerNotification] otherPeers " + parseInt(parsed[1]) + "=" + parsed[0]);
+        }
+
+        function hangingGetCallback() {
+            //trace("[hangingGetCallback]");
+            try {
+                if (hangingGet.readyState != 4)
+                    return;
+                if (hangingGet.status != 200) {
+                    trace("server status = " + hangingGet.status + ", error: " + hangingGet.statusText);
+	                if (hangingGet) {
+	                    //trace("hangingGet.abort");
+	                    hangingGet.abort();
+	                    hangingGet = null;
+	                }
+                    disconnect();
+                } else {
+                    var peer_id = GetIntHeader(hangingGet, "Pragma");
+                    var resp = hangingGet.responseText;
+	                if (hangingGet) {
+	                    //trace("hangingGet.abort");
+	                    hangingGet.abort();
+	                    hangingGet = null;
+	                }
+                    if (peer_id == my_id) {
+                        handleServerNotification(resp);
+                    } else {
+                        connectedPeerId = peer_id;
+                        connectedPeerName = other_peers[peer_id];
+                        handlePeerMessage(peer_id, resp);
+                    }
+                	/*
+                    var peer_id = GetIntHeader(hangingGet, "Pragma");
+                    if (peer_id == my_id) {
+                        handleServerNotification(hangingGet.responseText);
+                    } else {
+                        connectedPeerId = peer_id;
+                        connectedPeerName = other_peers[peer_id];
+                        handlePeerMessage(peer_id, hangingGet.responseText);
+                    }
+                    */
+                }
+
+/*
+                if (hangingGet) {
+                    trace("hangingGet.abort");
+                    hangingGet.abort();
+                    hangingGet = null;
+                }
+*/
+
+                if (my_id != 0) {
+                    //trace("my_id = " + my_id + ", startHangingGet");
+					//startHangingGet();
+                    window.setTimeout(startHangingGet, 500);
+                }
+            } catch (e) {
+                trace("Hanging get error: " + e.description);
+            }
+        }
+
+        function onHangingGetTimeout() {
+            trace("hanging get timeout. issuing again.");
+            hangingGet.abort();
+            hangingGet = null;
+            if (my_id != 0)
+            	//startHangingGet();
+                window.setTimeout(startHangingGet, 500);
+        }
+        function startHangingGet() {
+            //trace("[startHangingGet]");
+            try {
+                hangingGet = new XMLHttpRequest();
+                hangingGet.onreadystatechange = hangingGetCallback;
+                hangingGet.ontimeout = onHangingGetTimeout;
+                hangingGet.open("GET", server + "/wait/peer_id/" + my_id, true);
+                hangingGet.send();
+            } catch (e) {
+                trace("error" + e.description);
+            }
+        }
+
+        function signInCallback() {
+            trace("[signInCallback]");
+            try {
+                if (request.readyState == 4) {
+                    if (request.status == 200) {
+                        var peers = request.responseText.split("\n");
+                        var peer = peers[0];
+                        if (peer.length > 2) {
+	                        peer = peer.substr(1, peer.length - 2);
+	                        my_id = parseInt(peer.split(',')[1]);
+
+	                        trace("My id: " + my_id);
+	                        trace("peers: " + peers);
+                        }
+
+                        for (var i = 1; i < peers.length; ++i) {
+                        	peer = peers[i];
+                            if (peer.length > 2) {
+		                        peer = peer.substr(1, peer.length - 2);
+                                trace("Peer " + i + ": " + peer);
+                                g_peer_id = i;
+                                var parsed = peer.split(',');
+                                updatePeers(true, parseInt(parsed[1]), parsed[0]);
+                            }
+                        }
+
+/*                        
+                        my_id = parseInt(peers[0].split(',')[1]);
+
+                        trace("My id: " + my_id);
+                        trace("peers: " + peers);
+                        for (var i = 1; i < peers.length; ++i) {
+                            if (peers[i].length > 0) {
+                                trace("Peer " + i + ": " + peers[i]);
+                                g_peer_id = i;
+                                var parsed = peers[i].split(',');
+                                updatePeers(true, parseInt(parsed[1]), parsed[0]);
+                            }
+                        }
+Peer 1: "my_name,1,1"
+*/
+
+
+                        startHangingGet();
+                        request = null;
+                        signed_In = true;
+                        showSignInStatus();
+                        started = true;
+                    }
+                }
+            } catch (e) {
+                trace("error: " + e.description);
+            }
+        }
+
+        function showSignInStatus() {
+            var avPeers = document.getElementById("availablePeers");
+            var peerData = document.getElementById("idpeersData");
+            trace("showPeers signed_In=" + signed_In);
+            if (signed_In) {
+                avPeers.innerHTML = "Available peers";
+                peerData.style["visibility"] = "visible";
+                document.getElementById("connect").disabled = true;
+                document.getElementById("disconnect").disabled = false;
+            } else {
+                avPeers.innerHTML = "";
+                peerData.style["visibility"] = "hidden";
+                document.getElementById("connect").disabled = false;
+                document.getElementById("disconnect").disabled = true;
+            }
+        }
+
+        function signIn() {
+            trace("[signIn]");
+
+            try {
+                request = new XMLHttpRequest();
+                request.onreadystatechange = signInCallback;
+                request.open("GET", server + "/sign_in/" + localName, true);
+                request.send();
+            } catch (e) {
+                trace("error: " + e.description);
+            }
+        }
+
+        function getpermission() {
+            location.href = document.getElementById("server").value.toLowerCase()+"/list";
+
+        }
+        function connect() {
+            trace("[connect]");
+            var str = document.getElementById("local").value;
+            if (str) {
+                if (onlyASCII)
+                    var test = str;
+                else
+                    var test = encode_utf8(str);
+
+                localName = test;
+                server = document.getElementById("server").value.toLowerCase();
+                if (localName.length == 0) {
+                    alert("I need a name please.");
+                    document.getElementById("local").focus();
+                } else {
+                    signIn();
+                }
+            } else {
+                alert("Please enter you name");
+                document.getElementById("local").focus();
+            }
+        }
+
+        function outgoingCall(peer_id) {
+            trace("[outgoingCall] SEND OUTGOINGCALL FOR INITIALIZATION WEBRTC to peer: " + peer_id);
+            var pc_config = {
+                "iceServers": [
+				{
+					url: "stun:stun.l.google.com:19302"
+				},
+				{
+					url: "turn:89.108.113.194:3478?transport=tcp",
+					credential: "webrtc",
+					username: "webrtc",
+				},
+				{
+					url: "turn:89.108.113.194:3478?transport=udp",
+					credential: "webrtc",
+					username: "webrtc",
+				},
+				{
+					url: "turn:89.108.113.194:3478?transport=tcp",
+					credential: "andy",
+					username: "andy",
+				},
+				{
+					url: "turn:89.108.113.194:3478?transport=udp",
+					credential: "andy",
+					username: "andy",
+				},
+				{
+					url: "turn:89.108.113.194:3478?transport=tcp",
+					credential: "serg",
+					username: "serg",
+				},
+				{
+					url: "turn:89.108.113.194:3478?transport=udp",
+					credential: "serg",
+					username: "serg",
+				},
+			]
+            };
+
+            peer_id *= 1;
+            hcap.webrtc.outgoingCall({
+                "localId": my_id,
+                "remoteId": peer_id,
+                "onSuccess": function() {
+                    trace("onSuccess to call outgoingCall");
+                    //document.getElementById("peer_id").disabled = true;
+                },
+                "onFailure": function(f) {
+                    trace("onFailure : errorMessage = " + f.errorMessage);
+                    //document.getElementById("peer_id").disabled = false;
+                }
+            });
+        }
+
+        function receiveMsgHandler(param) {
+            trace("[receiveMsgHandler]");
+            trace("Event 'webrtc_message_received' is received.\n" +
+                "remotePeerId = " + param.remotePeerId + "\n" +
+                "message = " + param.message);
+            //sendMessage(param.remotePeerId, param.message);^M                                        
+
+            sendMessage(param.remotePeerId, param.message);
+            //sendMessage(param.remotePeerId, AsciiHex2Str(param.message));
+        }
+
+        function init() {
+            trace("[init]");
+            init_key_listener();
+
+            document.getElementById("peersLog").innerHTML = "No available peers.";
+            document.getElementById("peersLog").style["left"] = "0px";
+            document.getElementById('local').onkeypress = function(e) {
+                if (e.keyCode == 13) {
+                    document.getElementById('connect').click();
+                }
+            }
+
+            document.addEventListener(
+                "webrtc_message_received",
+                function (param) {
+                    // {Number} param.remotePeerId - remote peer id
+                    // {String} param.message - message
+                    trace("Event 'webrtc_message_received' is received.");
+                    trace("remotePeerId = " + param.remotePeerId + ", message = " + param.message);
+
+                    //sendMessage(param.remotePeerId, param.message);^M                                        
+                    
+                    sendMessage(param.remotePeerId, param.message);
+                    //sendMessage(param.remotePeerId, AsciiHex2Str(param.message));
+                },
+                false
+            );
+            
+            document.addEventListener(
+                "webrtc_event_received",
+                function (param) {
+                    // {String} param.eventString - WebRTC event string
+                    trace("[webrtc_event_received] event = "+ param.eventString + " is received");
+                    					
+					if(param.eventString == "p2p_av_disconnected"){
+						trace("eventString = " + param.eventString);
+						activeCall = false;
+						isConnected = false;
+					} else if(param.eventString == "p2p_av_connected"){
+						isConnected = true;
+					}
+                },
+                false
+            );
+            
+			hcap.property.setProperty({
+				 "key" : "browser_https_security_level", 
+				 "value" : "1", 
+				 "onSuccess" : function() {
+					 console.log("onSuccess to set property 'browser_https_security_level' as 1");
+				 }, 
+				 "onFailure" : function(f) {
+					 console.log("onFailure to set property: errorMessage = " + f.errorMessage);
+				 }
+			});
+			
+            randomString();
+        }
+        window.addEventListener('load', init);
+        window.onbeforeunload = disconnect;
+    
+    </script>
+</head>
+<body margin-left:0; margin-top:0; padding:0 ">
+    WebRTC Sample Application v1.5.0
+    <button id="refresh" onclick="history.go(0);">Refresh Page</button>
+    <button id="clearDebug" onclick="clearDebug();">Clear Debug</button>
+    <table width=100% class="white_box">
+        <tr>
+            <div id="idpeers">
+                <!--<table>
+                    <tr>
+                        <td>
+                            <input type="text" id="callee" value="" style="visibility:hidden"/>
+                            <input type="text" id="peer_id" size="3" style="visibility:hidden" />
+                        </td>
+                    </tr>
+                </table>-->
+                <table>
+                    <tr>
+                        <td>
+                            <div id="idtext">Server</div>
+                            <!--input class="input" type="text" id="server" width="200px" value="http://10.178.84.215:8888" /-->
+                            <!--input class="input" type="text" id="server" width="200px" value="http://89.108.113.194:8888" /-->  
+                            <!--input class="input" type="text" id="server" width="200px" value="http://91.142.94.167:8888" /-->  
+                            <input class="input" type="text" id="server" width="200px" value="https://peerconnection.independa.com:8443" />  
+                            
+                        </td>
+                        <td>
+                        <!--a href=https://10.178.84.215:8443/list>Get Permission</a-->
+                        <input type="button" value="Get Permission" onclick="getpermission();"> 
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div id="idtext">MyName</div>
+                            <input class="input" type="text" id="local" value="TV-JK"/>
+                            <button type="button" onclick="randomString();" autofocus>Generate MyName</button>
+                        </td>
+                        <td class="idbutton">
+                            <button style="width:200px;height:50px;" id="connect" onclick="connect();">Sign in</button>
+                            <button style="width:200px;height:50px;" id="disconnect" onclick="disconnect();" disabled=true>Sign out</button>
+                            <!--button id="outgoingcall " onclick="outgoingCall(); ">Call with latest peer</button-->
+                        </td>
+                        <td>
+                            <button id="startPreviewVideo" onclick="startPreviewVideo();">hcap.webrtc.startPreviewVideo</button>                            
+                        </td>
+                        <td>
+							<button id="getConfiguration" onclick="getConfiguration();">hcap.webrtc.getConfiguration</button>
+                            <button id="setConfiguration1" onclick="setConfigurationTurn();">set TURN server</button>
+							<button id="setConfiguration2" onclick="setConfigurationAudioConf();">set audio stream configurations</button>                                                        
+                        </td>
+                    </tr>
+                </table>
+                <hr>
+                <text id="availablePeers"></text>
+                <div id="idpeersData">
+                    <table id="peersLog"></table>
+                </div>
+            </div>
+        </tr>
+        <tr>
+            <div style="border:1px solid #ccc;overflow:auto;font-size:70%;width:80%;height:300px;" id="debug"></div>
+        </tr>
+    </table>
+</body>
+</html>

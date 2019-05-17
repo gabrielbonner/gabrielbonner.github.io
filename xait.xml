@@ -1,0 +1,32 @@
+<XAIT>
+	<versionNumber>21</versionNumber>
+	<AbstractService>
+		<svcName>P:C HTML Application</svcName>
+		<svcId>0x1204</svcId>
+		<isAutoSelect>true</isAutoSelect>
+		<ApplicationList>
+			<Application>
+				<appName>HTML</appName>
+				<applicationIdentifier>
+					<orgId>1</orgId>
+					<appId>8</appId>
+				</applicationIdentifier>
+				<applicationDescriptor>
+					<type>Hcap-h</type>
+					<controlCode>AUTOSTART</controlCode>
+					<visibility>NOT_VISIBLE_USERS</visibility>
+					<priority>255</priority>
+					<version>21</version>
+				</applicationDescriptor>
+				<HcapDescriptor>
+					<url>http://192.168.0.17:8000/procentric/application/index.html</url>
+					<applicationStructure>
+			        	<baseDirectory>/</baseDirectory>
+			        	<classpathExtension>/</classpathExtension>
+			        	<initialClass>index.html</initialClass>
+	                		</applicationStructure>
+				</HcapDescriptor>
+			</Application>
+		</ApplicationList>
+	</AbstractService>
+</XAIT>
