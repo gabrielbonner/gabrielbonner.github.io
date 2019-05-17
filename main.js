@@ -814,9 +814,14 @@ function onLoad() {
     }
 
     document.getElementById("onlyASCII").cheched = true;
+    console.log (navigator);
+    console.log (navigator.mediaDevices);
+    console.log (navigator.getUserMedia);
+    console.log (navigator.mediaDevices.getUserMedia);
 
     try {
-        navigator.getUserMedia(localConstraints, gotStream, onUserMediaError);
+        navigator.getUserMedia({ audio: true, video: true }, gotStream, onUserMediaError);
+        
         trace("Requested access to local media with new syntax.");
     } catch (e) {
         try {
