@@ -1,6 +1,6 @@
 //RTCPeerConnection = webkitRTCPeerConnection || RTCPeerConnection || window.mozRTCPeerConnection;
 //URL = webkitURL || URL;
-navigator.getUserMedia = cordova.plugins.iosrtc.GetUserMedia;
+navigator.getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.GetUserMedia || navigator.msGetUserMedia;
 windowURL = window.URL || window.webkitURL || window.mozURL || window.msURL;
 
 
@@ -337,8 +337,11 @@ function createPeerConnection() {
     };
     try {
         //pc = new webkitRTCPeerConnection(pc_config);
-        pc = cordova.plugins.iosrtc.RTCPeerConnection(pc_config);
-
+        if (isFirefox) {
+            pc = new window.mozRTCPeerConnection(pc_config, sdpConstraints);
+        } else {
+            pc = new webkitRTCPeerConnection(pc_config, sdpConstraints);
+        }
         pc.onicecandidate = onIceCandidate;
         trace("Created RTCPeerConnnection with config \"" + JSON.stringify(pc_config) + "\".");
     } catch (e) {
@@ -813,37 +816,12 @@ function onLoad() {
     document.getElementById("onlyASCII").cheched = true;
 
     try {
-cordova.plugins.iosrtc.getUserMedia(
-  // constraints
-  { audio: true, video: true },
-  // success callback
-  function (stream) {
-    console.log('got local MediaStream: ', stream);
-
-    pc.addStream(stream);
-  },
-  // failure callback
-  function (error) {
-    console.error('getUserMedia failed: ', error);
-  }
-);
+        navigator.getUserMedia(localConstraints, gotStream, onUserMediaError);
         trace("Requested access to local media with new syntax.");
     } catch (e) {
         try {
-cordova.plugins.iosrtc.getUserMedia(
-  // constraints
-  { audio: true, video: true },
-  // success callback
-  function (stream) {
-    console.log('got local MediaStream: ', stream);
-
-    pc.addStream(stream);
-  },
-  // failure callback
-  function (error) {
-    console.error('getUserMedia failed: ', error);
-  }
-);            trace("Requested access to local media with old syntax.");
+            navigator.getUserMedia("video,audio", gotStream, onUserMediaError);
+            trace("Requested access to local media with old syntax.");
         } catch (e) {
             alert("GetUserMedia() failed. Is the MediaStream flag enabled in about:flags?");
             trace("GetUserMedia failed with exception: " + e.message);
