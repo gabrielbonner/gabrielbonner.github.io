@@ -813,12 +813,37 @@ function onLoad() {
     document.getElementById("onlyASCII").cheched = true;
 
     try {
-        navigator.getUserMedia(localConstraints, gotStream, onUserMediaError);
+cordova.plugins.iosrtc.getUserMedia(
+  // constraints
+  { audio: true, video: true },
+  // success callback
+  function (stream) {
+    console.log('got local MediaStream: ', stream);
+
+    pc.addStream(stream);
+  },
+  // failure callback
+  function (error) {
+    console.error('getUserMedia failed: ', error);
+  }
+);
         trace("Requested access to local media with new syntax.");
     } catch (e) {
         try {
-            navigator.getUserMedia("video,audio", gotStream, onUserMediaError);
-            trace("Requested access to local media with old syntax.");
+cordova.plugins.iosrtc.getUserMedia(
+  // constraints
+  { audio: true, video: true },
+  // success callback
+  function (stream) {
+    console.log('got local MediaStream: ', stream);
+
+    pc.addStream(stream);
+  },
+  // failure callback
+  function (error) {
+    console.error('getUserMedia failed: ', error);
+  }
+);            trace("Requested access to local media with old syntax.");
         } catch (e) {
             alert("GetUserMedia() failed. Is the MediaStream flag enabled in about:flags?");
             trace("GetUserMedia failed with exception: " + e.message);
