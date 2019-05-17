@@ -808,7 +808,7 @@ function onLoad() {
 
     document.getElementById("onlyASCII").cheched = true;
     console.log(navigator);
-    console.lgo(navigatorCordova);
+    console.log(navigatorCordova);
     try {
         navigatorCordova.getUserMedia({ audio: true, video: true }, gotStream, onUserMediaError);
         
