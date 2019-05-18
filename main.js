@@ -422,7 +422,13 @@ function setFocus() {
 
 function gotStream(stream) {
     localStream = stream;
-    localVideo.src = window.URL.createObjectURL(stream);
+    localVideo.style.opacity = 1;
+    localVideo.src = window.URL.createObjectURL(localStream);
+
+    trace("lOCAL stream added.5");
+    document.getElementById("selfView").style.display="block";
+    document.getElementById("local").focus();
+    setTimeout(setFocus(), 1000);
 }
 
 function onUserMediaError(error) {
