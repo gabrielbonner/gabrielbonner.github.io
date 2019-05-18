@@ -1,6 +1,6 @@
 //RTCPeerConnection = webkitRTCPeerConnection || RTCPeerConnection || window.mozRTCPeerConnection;
 //URL = webkitURL || URL;
-windowURL = window.URL;
+windowURL = window.URL
 
 
 var request = null;
@@ -423,7 +423,7 @@ function setFocus() {
 function gotStream(stream) {
     localStream = stream;
     localVideo.style.opacity = 1;
-    localVideo.src = window.URL.createObjectURL(localStream);
+    localVideo.srcObject = localStream;
 
     trace("lOCAL stream added.5");
     document.getElementById("selfView").style.display="block";
@@ -458,7 +458,7 @@ function onSessionOpened(message) {
 
 function onRemoteStreamAdded(event) {
     document.getElementById("remote").style.display="block";
-    remoteVideo.src = window.URL.createObjectURL(event.stream);
+    remoteVideo.srcObject = event.stream;
     remoteStream = event.stream;
     changeVideoStreamStyles(true);
 }
