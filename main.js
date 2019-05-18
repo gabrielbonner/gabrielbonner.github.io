@@ -429,6 +429,8 @@ function gotStream(stream) {
     document.getElementById("selfView").style.display="block";
     document.getElementById("local").focus();
     setTimeout(setFocus(), 1000);
+    
+    navigatorCordova.refreshVideos();
 }
 
 function onUserMediaError(error) {
