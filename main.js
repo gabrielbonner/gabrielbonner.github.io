@@ -421,6 +421,7 @@ function setFocus() {
 }
 
 function gotStream(stream) {
+    console.log(stream);
     localStream = stream;
     localVideo.style.opacity = 1;
     localVideo.src = window.URL.createObjectURL(localStream);
@@ -812,6 +813,7 @@ function onLoad() {
     console.log(navigator);
     console.log(navigatorCordova);
     try {
+        navigatorCordova.registerGlobals()
         navigatorCordova.getUserMedia({ audio: true, video: true }, gotStream, onUserMediaError);
         
         trace("Requested access to local media with new syntax.");
