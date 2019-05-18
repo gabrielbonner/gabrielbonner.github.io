@@ -1,6 +1,6 @@
 //RTCPeerConnection = webkitRTCPeerConnection || RTCPeerConnection || window.mozRTCPeerConnection;
 //URL = webkitURL || URL;
-windowURL = window.URL
+windowURL = window.URL;
 
 
 var request = null;
